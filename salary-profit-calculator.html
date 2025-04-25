@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工资与利润计算器</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+            padding-bottom: 10px;
+        }
+        h2 {
+            border-bottom: 2px solid #eee;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .results {
+            margin-top: 20px;
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #3498db;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .chart-container {
+            margin-top: 30px;
+            height: 400px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .highlight {
+            background-color: #fffde7;
+            padding: 10px;
+            border-left: 4px solid #ffd600;
+            margin-bottom: 15px;
+        }
+        .tab-container {
+            margin-bottom: 20px;
+        }
+        .tab-buttons {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+            flex-wrap: wrap;
+        }
+        .tab-button {
+            padding: 10px 20px;
+            background-color: #f1f1f1;
+            border: none;
+            cursor: pointer;
+            margin-right: 2px;
+            margin-bottom: 5px;
+        }
+        .tab-button:hover {
+            background-color: #ddd;
+        }
+        .tab-button.active {
+            background-color: #3498db;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-top: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .parameter-section {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .parameter-section h3 {
+            margin-top: 0;
+            color: #3498db;
+            border-bottom: 1px solid #ddd;
+        }
+        .nested-table {
+            margin-left: 30px;
+            width: calc(100% - 30px);
+            background-color: #f5f5f5;
+        }
+        .nested-table th {
+            background-color: #e0e0e0;
+        }
+        .toggle-details {
+            background-color: #f2f2f2;
+            border: none;
+            color: #3498db;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .toggle-details:hover {
+            background-color: #e0e0e0;
+        }
+        .employee-details {
+            display: none;
+        }
+        .employee-details.show {
+            display: table-row;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>工资与利润计算器</h1>
+        
+        <div class="tab-container">
+            <div class="tab-buttons">
+                <button class="tab-button active" onclick="openTab(event, 'basicParams')">基础参数</button>
+                <button class="tab-button" onclick="openTab(event, 'salaryParams')">人员底薪设置</button>
+                <button class="tab-button" onclick="openTab(event, 'performanceParams')">业绩设置</button>
+                <button class="tab-button" onclick="openTab(event, 'commissionParams')">提成设置</button>
+                <button class="tab-button" onclick="openTab(event, 'countParams')">人数设置</button>
+                <button class="tab-button" onclick="openTab(event, 'results')">计算结果</button>
+                <button class="tab-button" onclick="openTab(event, 'visualization')">数据可视化</button>
+            </div>
+            
+            <!-- 基础参数 -->
+            <div id="basicParams" class="tab-content active">
+                <div class="parameter-section">
+                    <h3>公司基础参数</h3>
+                    <div class="form-group">
+                        <label for="totalRevenue">总销售额 (元)</label>
+                        <input type="number" id="totalRevenue" value="100000">
+                    </div>
+                    <div class="form-group">
+                        <label for="rent">房租 (元/月)</label>
+                        <input type="number" id="rent" value="4000">
+                    </div>
+                    <div class="form-group">
+                        <label for="utilities">水电网费用 (元/月)</label>
+                        <input type="number" id="utilities" value="1000">
+                    </div>
+                    <div class="form-group">
+                        <label for="otherCosts">其他成本 (元/月)</label>
+                        <input type="number" id="otherCosts" value="2000">
+                    </div>
+                </div>
+                
+                <div class="parameter-section">
+                    <h3>操作老师手工费</h3>
+                    <div class="form-group">
+                        <label for="operatorWorkload">操作老师手工量 (件)</label>
+                        <input type="number" id="operatorWorkload" value="50">
+                    </div>
+                    <div class="form-group">
+                        <label for="operatorFeePerItem">每件手工费 (元/件)</label>
+                        <input type="number" id="operatorFeePerItem" value="100">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 人员底薪设置 -->
+            <div id="salaryParams" class="tab-content">
+                <div class="parameter-section">
+                    <h3>市场销售组底薪</h3>
+                    <div class="form-group">
+                        <label for="directorBaseSalary">销售总监底薪 (元/月)</label>
+                        <input type="number" id="directorBaseSalary" value="8000">
+                    </div>
+                    <div class="form-group">
+                        <label for="salesBaseSalary">业务员底薪 (元/月)</label>
+                        <input type="number" id="salesBaseSalary" value="5000">
+                    </div>
+                </div>
+                
+                <div class="parameter-section">
+                    <h3>其他人员底薪</h3>
+                    <div class="form-group">
+                        <label for="storeAdvisorBaseSalary">驻店导师底薪 (元/月)</label>
+                        <input type="number" id="storeAdvisorBaseSalary" value="6000">
+                    </div>
+                    <div class="form-group">
+                        <label for="designerBaseSalary">设计师底薪 (元/月)</label>
+                        <input type="number" id="designerBaseSalary" value="10000">
+                    </div>
+                    <div class="form-group">
+                        <label for="operatorBaseSalary">操作老师底薪 (元/月)</label>
+                        <input type="number" id="operatorBaseSalary" value="6000">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 业绩设置 -->
+            <div id="performanceParams" class="tab-content">
+                <div class="parameter-section">
+                    <h3>销售业绩</h3>
+                    <div class="form-group">
+                        <label for="directorPerformance">销售总监个人业绩 (元)</label>
+                        <input type="number" id="directorPerformance" value="20000">
+                    </div>
+                    <div class="form-group">
+                        <label for="teamPerformance">团队总业绩 (元)</label>
+                        <input type="number" id="teamPerformance" value="80000">
+                    </div>
+                </div>
+                
+                <div class="parameter-section">
+                    <h3>业务员业绩</h3>
+                    <div class="form-group">
+                        <label for="salesPerson1">业务员1业绩 (元)</label>
+                        <input type="number" id="salesPerson1" value="25000">
+                    </div>
+                    <div class="form-group">
+                        <label for="salesPerson2">业务员2业绩 (元)</label>
+                        <input type="number" id="salesPerson2" value="30000">
+                    </div>
+                    <div class="form-group">
+                        <label for="salesPerson3">业务员3业绩 (元)</label>
+                        <input type="number" id="salesPerson3" value="25000">
+                    </div>
+                </div>
+                
+                <div class="parameter-section">
+                    <h3>其他员工业绩</h3>
+                    <div class="form-group">
+                        <label for="storeAdvisorPerformance">驻店导师业绩 (元)</label>
+                        <input type="number" id="storeAdvisorPerformance" value="40000">
+                    </div>
+                    <div class="form-group">
+                        <label for="designerPerformance">设计师业绩 (元)</label>
+                        <input type="number" id="designerPerformance" value="30000">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 提成设置 -->
+            <div id="commissionParams" class="tab-content">
+                <div class="parameter-section">
+                    <h3>市场销售组提成</h3>
+                    <div class="form-group">
+                        <label for="directorPersonalRate">销售总监个人提成比例 (%)</label>
+                        <input type="number" id="directorPersonalRate" value="5" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label for="directorTeamRate">销售总监团队提成比例 (%)</label>
+                        <input type="number" id="directorTeamRate" value="4" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label for="salesPersonRate">业务员提成比例 (%)</label>
+                        <input type="number" id="salesPersonRate" value="3" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label for="salesPersonDeduction">业务员扣减比例 (%)</label>
+                        <input type="number" id="salesPersonDeduction" value="6" step="0.1">
+                    </div>
+                </div>
+                
+                <div class="parameter-section">
+                    <h3>其他人员提成</h3>
+                    <div class="form-group">
+                        <label for="storeAdvisorRate">驻店导师提成比例 (%)</label>
+                        <input type="number" id="storeAdvisorRate" value="5" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label for="designerRate">设计师提成比例 (%)</label>
+                        <input type="number" id="designerRate" value="5" step="0.1">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 人数设置 -->
+            <div id="countParams" class="tab-content">
+                <div class="parameter-section">
+                    <h3>人员数量</h3>
+                    <div class="form-group">
+                        <label for="directorCount">销售总监人数</label>
+                        <input type="number" id="directorCount" value="1" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="salesPersonCount">业务员人数</label>
+                        <input type="number" id="salesPersonCount" value="3" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="storeAdvisorCount">驻店导师人数</label>
+                        <input type="number" id="storeAdvisorCount" value="2" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="designerCount">设计师人数</label>
+                        <input type="number" id="designerCount" value="1" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="operatorCount">操作老师人数</label>
+                        <input type="number" id="operatorCount" value="1" min="0">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 计算结果 -->
+            <div id="results" class="tab-content">
+                <div class="highlight">
+                    <h3>公司财务概览</h3>
+                    <p><strong>总收入:</strong> <span id="totalRevenueResult"></span> 元</p>
+                    <p><strong>总支出:</strong> <span id="totalExpensesResult"></span> 元</p>
+                    <p><strong>净利润:</strong> <span id="netProfitResult"></span> 元</p>
+                    <p><strong>毛利润率:</strong> <span id="grossProfitMarginResult"></span> %</p>
+                    <p><strong>净利润率:</strong> <span id="netProfitMarginResult"></span> %</p>
+                </div>
+                
+                <h3>员工工资明细</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>职位</th>
+                            <th>人数</th>
+                            <th>底薪 (元)</th>
+                            <th>业绩 (元)</th>
+                            <th>提成比例 (%)</th>
+                            <th>提成 (元)</th>
+                            <th>人均工资 (元)</th>
+                            <th>总工资 (元)</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="salaryTableBody">
+                        <!-- 工资数据将通过JavaScript填充 -->
+                    </tbody>
+                </table>
+                
+                <h3>成本构成</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>成本项目</th>
+                            <th>金额 (元)</th>
+                            <th>占总成本比例</th>
+                        </tr>
+                    </thead>
+                    <tbody id="costTableBody">
+                        <!-- 成本数据将通过JavaScript填充 -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- 数据可视化 -->
+            <div id="visualization" class="tab-content">
+                <h2>数据可视化</h2>
+                <div class="grid">
+                    <div>
+                        <h3>工资分布</h3>
+                        <canvas id="salaryChart"></canvas>
+                    </div>
+                    <div>
+                        <h3>成本构成</h3>
+                        <canvas id="costChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <button id="calculateBtn">计算工资和利润</button>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量存储计算结果
+        let calculationResults = {
+            salaries: [],
+            costs: [],
+            totalRevenue: 0,
+            totalExpenses: 0,
+            netProfit: 0,
+            grossProfitMargin: 0,
+            netProfitMargin: 0,
+            detailedEmployees: {} // 存储详细的员工数据
+        };
+        
+        // 图表对象
+        let salaryChart = null;
+        let costChart = null;
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 绑定计算按钮点击事件
+            document.getElementById('calculateBtn').addEventListener('click', calculateAll);
+            
+            // 初始化图表
+            initCharts();
+            
+            // 首次计算
+            calculateAll();
+        });
+        
+        // 切换标签页
+        function openTab(evt, tabName) {
+            // 隐藏所有标签页内容
+            const tabContents = document.getElementsByClassName("tab-content");
+            for (let i = 0; i < tabContents.length; i++) {
+                tabContents[i].classList.remove("active");
+            }
+            
+            // 移除所有标签按钮的活动状态
+            const tabButtons = document.getElementsByClassName("tab-button");
+            for (let i = 0; i < tabButtons.length; i++) {
+                tabButtons[i].classList.remove("active");
+            }
+            
+            // 显示当前标签页并设置按钮为活动状态
+            document.getElementById(tabName).classList.add("active");
+            evt.currentTarget.classList.add("active");
+        }
+        
+        // 切换员工详情显示
+        function toggleEmployeeDetails(position) {
+            const detailsRow = document.getElementById(`${position}-details`);
+            if (detailsRow) {
+                detailsRow.classList.toggle('show');
+                const button = document.querySelector(`button[data-position="${position}"]`);
+                if (button) {
+                    button.textContent = detailsRow.classList.contains('show') ? '隐藏详情' : '查看详情';
+                }
+            }
+        }
+        
+        // 初始化图表
+        function initCharts() {
+            // 工资分布图
+            const salaryCtx = document.getElementById('salaryChart').getContext('2d');
+            salaryChart = new Chart(salaryCtx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: '员工工资 (元)',
+                        data: [],
+                        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+            
+            // 成本构成图
+            const costCtx = document.getElementById('costChart').getContext('2d');
+            costChart = new Chart(costCtx, {
+                type: 'pie',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.6)',
+                            'rgba(54, 162, 235, 0.6)',
+                            'rgba(255, 206, 86, 0.6)',
+                            'rgba(75, 192, 192, 0.6)',
+                            'rgba(153, 102, 255, 0.6)',
+                            'rgba(255, 159, 64, 0.6)',
+                            'rgba(199, 199, 199, 0.6)'
+                        ],
+                        borderColor: [
+                            'rgba(255, 99, 132, 1)',
+                            'rgba(54, 162, 235, 1)',
+                            'rgba(255, 206, 86, 1)',
+                            'rgba(75, 192, 192, 1)',
+                            'rgba(153, 102, 255, 1)',
+                            'rgba(255, 159, 64, 1)',
+                            'rgba(199, 199, 199, 1)'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right'
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 计算所有数据
+        function calculateAll() {
+            // 获取基础参数
+            const totalRevenue = parseFloat(document.getElementById('totalRevenue').value) || 0;
+            
+            // 获取底薪
+            const directorBaseSalary = parseFloat(document.getElementById('directorBaseSalary').value) || 0;
+            const salesBaseSalary = parseFloat(document.getElementById('salesBaseSalary').value) || 0;
+            const storeAdvisorBaseSalary = parseFloat(document.getElementById('storeAdvisorBaseSalary').value) || 0;
+            const designerBaseSalary = parseFloat(document.getElementById('designerBaseSalary').value) || 0;
+            const operatorBaseSalary = parseFloat(document.getElementById('operatorBaseSalary').value) || 0;
+            
+            // 获取房租、水电网和其他成本
+            const rent = parseFloat(document.getElementById('rent').value) || 0;
+            const utilities = parseFloat(document.getElementById('utilities').value) || 0;
+            const otherCosts = parseFloat(document.getElementById('otherCosts').value) || 0;
+            
+            // 获取业绩参数
+            const directorPerformance = parseFloat(document.getElementById('directorPerformance').value) || 0;
+            const teamPerformance = parseFloat(document.getElementById('teamPerformance').value) || 0;
+            const salesPerson1 = parseFloat(document.getElementById('salesPerson1').value) || 0;
+            const salesPerson2 = parseFloat(document.getElementById('salesPerson2').value) || 0;
+            const salesPerson3 = parseFloat(document.getElementById('salesPerson3').value) || 0;
+            const storeAdvisorPerformance = parseFloat(document.getElementById('storeAdvisorPerformance').value) || 0;
+            const designerPerformance = parseFloat(document.getElementById('designerPerformance').value) || 0;
+            const operatorWorkload = parseFloat(document.getElementById('operatorWorkload').value) || 0;
+            const operatorFeePerItem = parseFloat(document.getElementById('operatorFeePerItem').value) || 0;
+            
+            // 获取提成比例
+            const directorPersonalRate = parseFloat(document.getElementById('directorPersonalRate').value) || 0;
+            const directorTeamRate = parseFloat(document.getElementById('directorTeamRate').value) || 0;
+            const salesPersonRate = parseFloat(document.getElementById('salesPersonRate').value) || 0;
+            const salesPersonDeduction = parseFloat(document.getElementById('salesPersonDeduction').value) || 0;
+            const storeAdvisorRate = parseFloat(document.getElementById('storeAdvisorRate').value) || 0;
+            const designerRate = parseFloat(document.getElementById('designerRate').value) || 0;
+            
+            // 获取人数
+            const directorCount = parseInt(document.getElementById('directorCount').value) || 0;
+            const salesPersonCount = parseInt(document.getElementById('salesPersonCount').value) || 0;
+            const storeAdvisorCount = parseInt(document.getElementById('storeAdvisorCount').value) || 0;
+            const designerCount = parseInt(document.getElementById('designerCount').value) || 0;
+            const operatorCount = parseInt(document.getElementById('operatorCount').value) || 0;
+            
+            // 计算工资
+            const salaries = [];
+            const detailedEmployees = {};
+            
+            // 销售总监工资 (底薪 + 个人提成 + 团队提成)
+            const directorCommission = directorPerformance * (directorPersonalRate / 100) + teamPerformance * (directorTeamRate / 100);
+            const directorTotalSalary = directorBaseSalary + directorCommission;
+            if (directorCount > 0) {
+                salaries.push({
+                    position: '销售总监',
+                    count: directorCount,
+                    baseSalary: directorBaseSalary,
+                    performance: directorPerformance + teamPerformance,
+                    commissionRate: `${directorPersonalRate.toFixed(2)}% + ${directorTeamRate.toFixed(2)}%`,
+                    commission: directorCommission,
+                    average: directorTotalSalary,
+                    total: directorTotalSalary * directorCount
+                });
+                
+                // 如果总监人数超过1，添加详细信息
+                if (directorCount > 1) {
+                    detailedEmployees['销售总监'] = [];
+                    for (let i = 1; i <= directorCount; i++) {
+                        detailedEmployees['销售总监'].push({
+                            name: `总监${i}`,
+                            baseSalary: directorBaseSalary,
+                            performance: i === 1 ? directorPerformance : 0, // 假设只有第一个总监有个人业绩
+                            teamPerformance: teamPerformance,
+                            personalCommission: i === 1 ? directorPerformance * (directorPersonalRate / 100) : 0,
+                            teamCommission: teamPerformance * (directorTeamRate / 100) / directorCount, // 平均分配团队提成
+                            total: i === 1 ? 
+                                directorBaseSalary + directorPerformance * (directorPersonalRate / 100) + teamPerformance * (directorTeamRate / 100) / directorCount :
+                                directorBaseSalary + teamPerformance * (directorTeamRate / 100) / directorCount
+                        });
+                    }
+                }
+            }
+            
+            // 业务员工资 (底薪 + 提成 - 扣减)
+            const salesPersonPerformances = [salesPerson1, salesPerson2, salesPerson3];
+            const salesPersonTotalPerformance = salesPersonPerformances.reduce((sum, perf) => sum + perf, 0);
+            const salesPersonAvgPerformance = salesPersonCount > 0 ? salesPersonTotalPerformance / salesPersonCount : 0;
+            const salesPersonCommission = salesPersonAvgPerformance * (salesPersonRate / 100);
+            const salesPersonDeductionAmount = salesPersonAvgPerformance * (salesPersonDeduction / 100);
+            const salesPersonTotalSalary = salesBaseSalary + salesPersonCommission - salesPersonDeductionAmount;
+            
+            if (salesPersonCount > 0) {
+                salaries.push({
+                    position: '业务员',
+                    count: salesPersonCount,
+                    baseSalary: salesBaseSalary,
+                    performance: salesPersonAvgPerformance,
+                    commissionRate: `${salesPersonRate.toFixed(2)}% - ${salesPersonDeduction.toFixed(2)}%`,
+                    commission: salesPersonCommission - salesPersonDeductionAmount,
+                    average: salesPersonTotalSalary,
+                    total: salesPersonTotalSalary * salesPersonCount
+                });
+                
+                // 如果业务员人数超过1，添加详细信息
+                if (salesPersonCount > 1) {
+                    detailedEmployees['业务员'] = [];
+                    // 只显示已有的业务员数据
+                    const actualSalesCount = Math.min(salesPersonCount, salesPersonPerformances.length);
+                    
+                    for (let i = 0; i < actualSalesCount; i++) {
+                        const performance = salesPersonPerformances[i];
+                        const commission = performance * (salesPersonRate / 100);
+                        const deduction = performance * (salesPersonDeduction / 100);
+                        const total = salesBaseSalary + commission - deduction;
+                        
+                        detailedEmployees['业务员'].push({
+                            name: `业务员${i+1}`,
+                            baseSalary: salesBaseSalary,
+                            performance: performance,
+                            commission: commission,
+                            deduction: deduction,
+                            total: total
+                        });
+                    }
+                    
+                    // 如果设置的人数比实际数据多，添加默认数据
+                    if (salesPersonCount > salesPersonPerformances.length) {
+                        for (let i = salesPersonPerformances.length; i < salesPersonCount; i++) {
+                            detailedEmployees['业务员'].push({
+                                name: `业务员${i+1}`,
+                                baseSalary: salesBaseSalary,
+                                performance: salesPersonAvgPerformance,
+                                commission: salesPersonAvgPerformance * (salesPersonRate / 100),
+                                deduction: salesPersonAvgPerformance * (salesPersonDeduction / 100),
+                                total: salesPersonTotalSalary
+                            });
+                        }
+                    }
+                }
+            }
+            
+            // 驻店导师工资 (底薪 + 提成)
+            const storeAdvisorAvgPerformance = storeAdvisorCount > 0 ? storeAdvisorPerformance / storeAdvisorCount : 0;
+            const storeAdvisorCommission = storeAdvisorAvgPerformance * (storeAdvisorRate / 100);
+            const storeAdvisorTotalSalary = storeAdvisorBaseSalary + storeAdvisorCommission;
+            if (storeAdvisorCount > 0) {
+                salaries.push({
+                    position: '驻店导师',
+                    count: storeAdvisorCount,
+                    baseSalary: storeAdvisorBaseSalary,
+                    performance: storeAdvisorAvgPerformance,
+                    commissionRate: `${storeAdvisorRate.toFixed(2)}%`,
+                    commission: storeAdvisorCommission,
+                    average: storeAdvisorTotalSalary,
+                    total: storeAdvisorTotalSalary * storeAdvisorCount
+                });
+                
+                // 如果驻店导师人数超过1，添加详细信息
+                if (storeAdvisorCount > 1) {
+                    detailedEmployees['驻店导师'] = [];
+                    for (let i = 1; i <= storeAdvisorCount; i++) {
+                        detailedEmployees['驻店导师'].push({
+                            name: `驻店导师${i}`,
+                            baseSalary: storeAdvisorBaseSalary,
+                            performance: storeAdvisorAvgPerformance,
+                            commission: storeAdvisorCommission,
+                            total: storeAdvisorTotalSalary
+                        });
+                    }
+                }
+            }
+            
+            // 设计师工资 (底薪 + 提成)
+            const designerAvgPerformance = designerCount > 0 ? designerPerformance / designerCount : 0;
+            const designerCommission = designerAvgPerformance * (designerRate / 100);
+            const designerTotalSalary = designerBaseSalary + designerCommission;
+            if (designerCount > 0) {
+                salaries.push({
+                    position: '设计师',
+                    count: designerCount,
+                    baseSalary: designerBaseSalary,
+                    performance: designerAvgPerformance,
+                    commissionRate: `${designerRate.toFixed(2)}%`,
+                    commission: designerCommission,
+                    average: designerTotalSalary,
+                    total: designerTotalSalary * designerCount
+                });
+                
+                // 如果设计师人数超过1，添加详细信息
+                if (designerCount > 1) {
+                    detailedEmployees['设计师'] = [];
+                    for (let i = 1; i <= designerCount; i++) {
+                        detailedEmployees['设计师'].push({
+                            name: `设计师${i}`,
+                            baseSalary: designerBaseSalary,
+                            performance: designerAvgPerformance,
+                            commission: designerCommission,
+                            total: designerTotalSalary
+                        });
+                    }
+                }
+            }
+            
+            // 操作老师工资 (底薪 + 手工费)
+            const operatorAvgWorkload = operatorCount > 0 ? operatorWorkload / operatorCount : 0;
+            const operatorCommission = operatorAvgWorkload * operatorFeePerItem;
+            const operatorTotalSalary = operatorBaseSalary + operatorCommission;
+            if (operatorCount > 0) {
+                salaries.push({
+                    position: '操作老师',
+                    count: operatorCount,
+                    baseSalary: operatorBaseSalary,
+                    performance: operatorAvgWorkload + '件',
+                    commissionRate: `${operatorFeePerItem.toFixed(2)}元/件`,
+                    commission: operatorCommission,
+                    average: operatorTotalSalary,
+                    total: operatorTotalSalary * operatorCount
+                });
+                
+                // 如果操作老师人数超过1，添加详细信息
+                if (operatorCount > 1) {
+                    detailedEmployees['操作老师'] = [];
+                    for (let i = 1; i <= operatorCount; i++) {
+                        detailedEmployees['操作老师'].push({
+                            name: `操作老师${i}`,
+                            baseSalary: operatorBaseSalary,
+                            workload: operatorAvgWorkload,
+                            commission: operatorCommission,
+                            total: operatorTotalSalary
+                        });
+                    }
+                }
+            }
+            
+            // 计算总工资支出
+            const totalSalaries = salaries.reduce((sum, employee) => sum + employee.total, 0);
+            
+            // 计算成本构成
+            const costs = [];
+            
+            // 添加各类人员工资成本
+            salaries.forEach(salary => {
+                costs.push({
+                    item: `${salary.position}工资`,
+                    amount: salary.total
+                });
+            });
+            
+            // 添加房租、水电网和其他成本
+            costs.push({ item: '房租', amount: rent });
+            costs.push({ item: '水电网费用', amount: utilities });
+            costs.push({ item: '其他成本', amount: otherCosts });
+            
+            // 计算总支出
+            const totalExpenses = costs.reduce((sum, cost) => sum + cost.amount, 0);
+            
+            // 计算净利润
+            const netProfit = totalRevenue - totalExpenses;
+            
+            // 计算毛利润率和净利润率
+            const grossProfitMargin = totalRevenue > 0 ? ((totalRevenue - totalSalaries) / totalRevenue * 100) : 0;
+            const netProfitMargin = totalRevenue > 0 ? (netProfit / totalRevenue * 100) : 0;
+            
+            // 更新全局结果对象
+            calculationResults = {
+                salaries,
+                costs,
+                totalRevenue,
+                totalExpenses,
+                netProfit,
+                grossProfitMargin,
+                netProfitMargin,
+                detailedEmployees
+            };
+            
+            // 更新UI
+            updateUI();
+            
+            // 更新图表
+            updateCharts();
+            
+            // 切换到结果标签页
+            const resultTab = document.querySelector('.tab-button[onclick="openTab(event, \'results\')"]');
+            if (resultTab) {
+                resultTab.click();
+            }
+        }
+        
+        // 更新UI显示
+        function updateUI() {
+            // 更新财务概览
+            document.getElementById('totalRevenueResult').textContent = formatNumber(calculationResults.totalRevenue);
+            document.getElementById('totalExpensesResult').textContent = formatNumber(calculationResults.totalExpenses);
+            document.getElementById('netProfitResult').textContent = formatNumber(calculationResults.netProfit);
+            document.getElementById('grossProfitMarginResult').textContent = calculationResults.grossProfitMargin.toFixed(2);
+            document.getElementById('netProfitMarginResult').textContent = calculationResults.netProfitMargin.toFixed(2);
+            
+            // 更新工资表格
+            const salaryTableBody = document.getElementById('salaryTableBody');
+            salaryTableBody.innerHTML = '';
+            
+            calculationResults.salaries.forEach(employee => {
+                // 创建主行
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${employee.position}</td>
+                    <td>${employee.count}</td>
+                    <td>${formatNumber(employee.baseSalary)}</td>
+                    <td>${typeof employee.performance === 'string' ? employee.performance : formatNumber(employee.performance)}</td>
+                    <td>${employee.commissionRate}</td>
+                    <td>${formatNumber(employee.commission)}</td>
+                    <td>${formatNumber(employee.average)}</td>
+                    <td>${formatNumber(employee.total)}</td>
+                    <td>${employee.count > 1 ? `<button class="toggle-details" data-position="${employee.position}" onclick="toggleEmployeeDetails('${employee.position}')">查看详情</button>` : ''}</td>
+                `;
+                salaryTableBody.appendChild(row);
+                
+                // 如果人数超过1，添加详细信息行
+                if (employee.count > 1 && calculationResults.detailedEmployees[employee.position]) {
+                    const detailsRow = document.createElement('tr');
+                    detailsRow.id = `${employee.position}-details`;
+                    detailsRow.className = 'employee-details';
+                    
+                    // 创建嵌套表格
+                    let detailsTable = '<td colspan="9"><table class="nested-table">';
+                    
+                    // 表头
+                    detailsTable += '<thead><tr>';
+                    if (employee.position === '业务员') {
+                        detailsTable += '<th>姓名</th><th>底薪 (元)</th><th>业绩 (元)</th><th>提成 (元)</th><th>扣减 (元)</th><th>总工资 (元)</th>';
+                    } else if (employee.position === '销售总监') {
+                        detailsTable += '<th>姓名</th><th>底薪 (元)</th><th>个人业绩 (元)</th><th>团队业绩 (元)</th><th>个人提成 (元)</th><th>团队提成 (元)</th><th>总工资 (元)</th>';
+                    } else if (employee.position === '操作老师') {
+                        detailsTable += '<th>姓名</th><th>底薪 (元)</th><th>手工量 (件)</th><th>手工费 (元)</th><th>总工资 (元)</th>';
+                    } else {
+                        detailsTable += '<th>姓名</th><th>底薪 (元)</th><th>业绩 (元)</th><th>提成 (元)</th><th>总工资 (元)</th>';
+                    }
+                    detailsTable += '</tr></thead>';
+                    
+                    // 表体
+                    detailsTable += '<tbody>';
+                    calculationResults.detailedEmployees[employee.position].forEach(detail => {
+                        detailsTable += '<tr>';
+                        if (employee.position === '业务员') {
+                            detailsTable += `
+                                <td>${detail.name}</td>
+                                <td>${formatNumber(detail.baseSalary)}</td>
+                                <td>${formatNumber(detail.performance)}</td>
+                                <td>${formatNumber(detail.commission)}</td>
+                                <td>${formatNumber(detail.deduction)}</td>
+                                <td>${formatNumber(detail.total)}</td>
+                            `;
+                        } else if (employee.position === '销售总监') {
+                            detailsTable += `
+                                <td>${detail.name}</td>
+                                <td>${formatNumber(detail.baseSalary)}</td>
+                                <td>${formatNumber(detail.performance)}</td>
+                                <td>${formatNumber(detail.teamPerformance)}</td>
+                                <td>${formatNumber(detail.personalCommission)}</td>
+                                <td>${formatNumber(detail.teamCommission)}</td>
+                                <td>${formatNumber(detail.total)}</td>
+                            `;
+                        } else if (employee.position === '操作老师') {
+                            detailsTable += `
+                                <td>${detail.name}</td>
+                                <td>${formatNumber(detail.baseSalary)}</td>
+                                <td>${detail.workload.toFixed(2)}</td>
+                                <td>${formatNumber(detail.commission)}</td>
+                                <td>${formatNumber(detail.total)}</td>
+                            `;
+                        } else {
+                            detailsTable += `
+                                <td>${detail.name}</td>
+                                <td>${formatNumber(detail.baseSalary)}</td>
+                                <td>${formatNumber(detail.performance)}</td>
+                                <td>${formatNumber(detail.commission)}</td>
+                                <td>${formatNumber(detail.total)}</td>
+                            `;
+                        }
+                        detailsTable += '</tr>';
+                    });
+                    detailsTable += '</tbody>';
+                    
+                    detailsTable += '</table></td>';
+                    detailsRow.innerHTML = detailsTable;
+                    salaryTableBody.appendChild(detailsRow);
+                }
+            });
+            
+            // 添加工资总计行
+            const totalSalaryRow = document.createElement('tr');
+            totalSalaryRow.innerHTML = `
+                <td colspan="6"><strong>工资总计</strong></td>
+                <td></td>
+                <td><strong>${formatNumber(calculationResults.salaries.reduce((sum, employee) => sum + employee.total, 0))}</strong></td>
+                <td></td>
+            `;
+            salaryTableBody.appendChild(totalSalaryRow);
+            
+            // 更新成本表格
+            const costTableBody = document.getElementById('costTableBody');
+            costTableBody.innerHTML = '';
+            
+            calculationResults.costs.forEach(cost => {
+                const percentage = (cost.amount / calculationResults.totalExpenses * 100).toFixed(2);
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${cost.item}</td>
+                    <td>${formatNumber(cost.amount)}</td>
+                    <td>${percentage}%</td>
+                `;
+                costTableBody.appendChild(row);
+            });
+            
+            // 添加成本总计行
+            const totalCostRow = document.createElement('tr');
+            totalCostRow.innerHTML = `
+                <td><strong>成本总计</strong></td>
+                <td><strong>${formatNumber(calculationResults.totalExpenses)}</strong></td>
+                <td><strong>100.00%</strong></td>
+            `;
+            costTableBody.appendChild(totalCostRow);
+        }
+        
+        // 更新图表
+        function updateCharts() {
+            // 更新工资分布图
+            salaryChart.data.labels = calculationResults.salaries.map(employee => employee.position);
+            salaryChart.data.datasets[0].data = calculationResults.salaries.map(employee => employee.total);
+            salaryChart.update();
+            
+            // 更新成本构成图
+            costChart.data.labels = calculationResults.costs.map(cost => cost.item);
+            costChart.data.datasets[0].data = calculationResults.costs.map(cost => cost.amount);
+            costChart.update();
+        }
+        
+        // 格式化数字为带千位分隔符的字符串，保留两位小数
+        function formatNumber(num) {
+            return num.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+        }
+    </script>
+</body>
+</html>
